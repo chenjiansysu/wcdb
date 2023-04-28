@@ -1,5 +1,5 @@
 //
-// Created by sanhuazhang on 2019/05/02
+// Created by qiuwenchen on 2023/4/25.
 //
 
 /*
@@ -24,35 +24,23 @@
 
 #import "MigrationCompatibleTestCase.h"
 
-@interface PrimaryKeyTableMigratingCompatibleTests : MigrationCompatibleTestCase
+@interface CipherDatabaseMigrationCompatibleTests : MigrationCompatibleTestCase
 
 @end
 
-@implementation PrimaryKeyTableMigratingCompatibleTests
+@implementation CipherDatabaseMigrationCompatibleTests
 
 - (void)setUp
 {
-    self.mode = MigrationObjectORMModePrimaryKey;
-    self.isCrossDatabaseMigration = NO;
+    self.mode = MigrationObjectORMModeNormal;
+    self.isCrossDatabaseMigration = YES;
+    self.needCipher = YES;
     [super setUp];
-
-    TestCaseAssertTrue([self.database stepMigration]);
-    TestCaseAssertFalse([self.database isMigrated]);
 }
 
 - (void)test_insert
 {
     [self doTestInsert];
-}
-
-- (void)test_insert_or_ignore
-{
-    [self doTestInsertOrIgnore];
-}
-
-- (void)test_insert_failed_with_conflict
-{
-    [self doTestInsertFailedWithConflict];
 }
 
 - (void)test_limited_delete
@@ -83,6 +71,11 @@
 - (void)test_subquery_within_update
 {
     [self doTestSubqueryWithinUpdate];
+}
+
+- (NSArray<NSObject<WCTTableCoding>*>*)getAllObjects
+{
+    return [self.table getObjectsOrders:MigrationObject.identifier.asOrder(WCTOrderedAscending)];
 }
 
 @end

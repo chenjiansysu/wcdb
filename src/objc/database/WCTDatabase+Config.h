@@ -27,7 +27,16 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef NS_ENUM(int, WCTCipherVersion) {
+    WCTCipherVersionDefault = 0,
+    WCTCipherVersion1,
+    WCTCipherVersion2,
+    WCTCipherVersion3,
+    WCTCipherVersion4,
+};
+
 typedef NS_ENUM(int, WCTConfigPriority) {
+    WCTConfigPriorityHighest = INT32_MIN, // Only For cipher config
     WCTConfigPriorityHigh = -100,
     WCTConfigPriorityDefault = 0,
     WCTConfigPriorityLow = 100,
@@ -47,9 +56,7 @@ typedef BOOL (^WCTConfigBlock)(WCTHandle* _Nonnull);
 - (void)setCipherKey:(NSData* _Nullable)cipherKey;
 
 /**
- @brief Set cipher key for a database. 
- For an encrypted database, you must call it before all other operation.
- The cipher page size defaults to 4096 in WCDB, but it defaults to 1024 in other databases. So for an existing database created by other database framework, you should set it to 1024. Otherwise, you'd better to use cipher page size with 4096 or simply call setCipherKey: interface to get better performance.
+ @brief This interface is equivalent to `-[WCTDatabase setCipherKey:cipherKey andCipherPageSize:4096 andCipherViersion:WCTCipherVersionDefault]`;
  @param cipherKey Cipher key.
  @param cipherPageSize Cipher Page Size
  */
@@ -57,12 +64,35 @@ typedef BOOL (^WCTConfigBlock)(WCTHandle* _Nonnull);
    andCipherPageSize:(int)cipherPageSize;
 
 /**
- @brief Set config for this database.  
- @warning Since WCDB is a multi-handle database, an executing handle will not apply this config immediately. Instead, all handles will run this config before its next operation.  
+ @brief Set cipher key for a database.
+ For an encrypted database, you must call it before all other operation.
+ The cipher page size defaults to 4096 in WCDB, but it defaults to 1024 in other databases. So for an existing database created by other database framework, you should set it to 1024.
+ Otherwise, you'd better to use cipher page size with 4096 or simply call setCipherKey: interface to get better performance.
+ @note  If your database is created with the default configuration of WCDB 1.0.x, please set cipherVersion to WCTCipherVersion3.
+ @param cipherKey Cipher key.
+ @param cipherPageSize Cipher Page Size
+ @param cipherVersion Use the default configuration of a specific version of sqlcipher
+ */
+- (void)setCipherKey:(NSData* _Nullable)cipherKey
+   andCipherPageSize:(int)cipherPageSize
+   andCipherViersion:(WCTCipherVersion)cipherVersion;
+
+/**
+ @brief Force SQLCipher to operate with the default settings consistent with that major version number as the default.
+ @note  It works the same as `PRAGMA cipher_default_compatibility`.
  
-     [database setConfig:^BOOL(std::shared_ptr<WCDB::Handle> &handle, WCDB::Error& error) {
-        return handle->execute(WCDB::StatementPragma().pragma(WCDB::Pragma::secureDelete()).to(true));
-     } forName:@"demo" withPriority:WCTConfigPriorityDefault];
+ @param version The specified sqlcipher major version.
+ */
++ (void)setDefaultCipherConfiguration:(WCTCipherVersion)version;
+
+/**
+ @brief Set config for this database.  
+ @warning Since WCDB is a multi-handle database, an executing handle will not apply this config immediately. Instead, all handles will run this config before its next operation.
+ @warning If you want to add cipher config, please use `WCTConfigPriorityHighest`.
+ 
+     [database setConfig:^BOOL(WCTHandle* handle) {
+        return [handle execute: WCDB::StatementPragma().pragma(WCDB::Pragma::secureDelete()).to(true)];
+     } withUninvocation:nil forName:@"demo" withPriority:WCTConfigPriorityDefault];
  */
 - (void)setConfig:(WCDB_ESCAPE WCTConfigBlock)invocation
  withUninvocation:(nullable WCDB_ESCAPE WCTConfigBlock)uninvocation
@@ -70,7 +100,7 @@ typedef BOOL (^WCTConfigBlock)(WCTHandle* _Nonnull);
      withPriority:(WCTConfigPriority)priority;
 
 /**
- @brief This interface is equivalent to `-[WCTDatabase setConfig:config forName:name withPriority:INT_MAX]`;
+ @brief This interface is equivalent to `-[WCTDatabase setConfig:config withUninvocation:uninvocation forName:name withPriority:WCTConfigPriorityDefault]`;
  */
 - (void)setConfig:(WCDB_ESCAPE WCTConfigBlock)invocation
  withUninvocation:(nullable WCDB_ESCAPE WCTConfigBlock)uninvocation

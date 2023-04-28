@@ -32,14 +32,16 @@ namespace WCDB {
 
 class CipherConfig final : public Config {
 public:
-    CipherConfig(const UnsafeData &cipher, int pageSize);
+    CipherConfig(const UnsafeData &cipher, int pageSize, int cipherVersion);
     ~CipherConfig() override final;
 
     bool invoke(InnerHandle *handle) override final;
+    UnsafeData getCipherKey();
 
 protected:
     const Data m_key;
     const int m_pageSize;
+    const int m_cipherVersion = 4;
 };
 
 } //namespace WCDB
